@@ -644,6 +644,7 @@ bool PickHandler::doEdgePick( osg::NodePath nodePath )
 			break;
 		}
 	}
+
 	if ( e != NULL ) {
 		if ( isAltPressed && pickMode == PickMode::NONE && !isShiftPressed ) {
 			osg::ref_ptr<osg::Vec3Array> coords = e->getCooridnates();
