@@ -125,7 +125,7 @@ if(COMMAND cotire )
 	set( COTIRE_DEBUG FALSE )
 
 	### Fix virtual memory range
-	if( MSVC )
+	if( MSVC )		
 		set (COTIRE_PCH_MEMORY_SCALING_FACTOR "240")
 	endif()
 
@@ -284,7 +284,7 @@ endif()
 # Find MOUSE3D
 find_package( MOUSE3D )
 if( MOUSE3D_FOUND )
-	include_directories( SYSTEM ${MOUSE3D_INCLUDE_DIRS} )
+#include_directories( SYSTEM ${MOUSE3D_INCLUDE_DIRS} )
 	add_definitions( -DMOUSE3D_FOUND )
 	message( STATUS "3DMouse FOUND" )
 else()
@@ -375,31 +375,6 @@ if( USE_BUILTIN_DEPENDENCIES )
 		endif()
 	endif() # OpenCV_FOUND
 
-
-	# Build osgModeling
-	ExternalProject_Add( dep_osgModeling
-		PREFIX osgModeling
-		SOURCE_DIR ${DEP_SOURCE}/osgModeling
-		BINARY_DIR osgModeling
-		CMAKE_ARGS
-			-DCMAKE_INSTALL_PREFIX:PATH=${DEP_BIN}
-			-DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
-			-DBUILD_PLUGINS=ON
-			-C ${CMAKE_CURRENT_BINARY_DIR}/config.cmake
-	)
-
-	add_library( osgModeling SHARED IMPORTED )
-	add_dependencies( osgModeling dep_osgModeling )
-	set_target_properties( osgModeling PROPERTIES
-		IMPORTED_LOCATION ${DEP_BIN}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}osgModeling${CMAKE_SHARED_LIBRARY_SUFFIX} )
-
-	if( WIN32 AND MSVC )
-		set_target_properties( osgModeling PROPERTIES
-			IMPORTED_LOCATION ${DEP_BIN}/bin/${CMAKE_SHARED_LIBRARY_PREFIX}osgModeling${CMAKE_SHARED_LIBRARY_SUFFIX}
-			IMPORTED_IMPLIB ${DEP_BIN}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}osgModeling${CMAKE_STATIC_LIBRARY_SUFFIX} )
-	endif()
-
-	# Building Lua or LuaJIT
 	if ( MSVC )
 		# Build Lua
 		ExternalProject_Add ( dep_lua
@@ -618,7 +593,6 @@ endif()
 include_directories( SYSTEM
 	${DEPENDENCIES_INCLUDE_DIR}
 	${DEPENDENCIES_INCLUDE_DIR}/libnoise
-#	${DEPENDENCIES_INCLUDE_DIR}/osgModeling
 )
 
 if( LEAP_FOUND )
@@ -667,7 +641,8 @@ file( GLOB_RECURSE SRC_SPEECH	"src/Speech/*.cpp" )
 # Leap
 file ( GLOB_RECURSE SRC_LEAP "src/Leap/*.cpp" )
 # MOUSE3D
-file ( GLOB_RECURSE SRC_MOUSE3D "src/Mouse3D/*.cpp" )
+file ( GLOB SRC_MOUSE3D_REPOSITORY "src/Mouse3d/*.cpp" )
+file ( GLOB_RECURSE SRC_MOUSE3D "src/Mouse3d/LibMouse3d/*.cpp" )
 
 
 # All source files
@@ -712,7 +687,7 @@ endif()
 
 # add MOUSE3D if found
 if( MOUSE3D_FOUND )
-	list( APPEND SRC ${SRC_MOUSE3D} )
+	list( APPEND SRC ${SRC_MOUSE3D_REPOSITORY} )
 endif()
 
 
@@ -757,7 +732,8 @@ file( GLOB_RECURSE HEADER_SPEECH	"include/Speech/*.h" )
 file( GLOB_RECURSE HEADER_LEAP	"include/Leap/*.h" )
 
 # MOUSE3D
-file( GLOB_RECURSE HEADER_MOUSE3D	"include/Mouse3D/*.h" )
+file( GLOB HEADER_MOUSE3D_REPOSITORY	"include/Mouse3d/*.h" )
+file( GLOB_RECURSE HEADER_MOUSE3D	"include/Mouse3d/LibMouse3d/*.h" )
 
 # All header files
 set( INCL
@@ -801,7 +777,7 @@ endif()
 
 #MOUSE3D
 if( MOUSE3D_FOUND )
-	list( APPEND INCL ${HEADER_MOUSE3D} )
+	list( APPEND INCL ${HEADER_MOUSE3D_REPOSITORY} )
 endif()
 
 #-------------------------------------- Group source files --------------------------------------
@@ -873,8 +849,8 @@ endif()
 
 #MOUSE3D
 if( MOUSE3D_FOUND )
-	source_group( \\src\\Mouse3D "^.*Mouse3D/.*$" )
-	source_group( \\headers\\Mouse3D "^.*Mouse3D/.*h$" )
+	source_group( \\src\\Mouse3d "^.*Mouse3d/.*$" )
+	source_group( \\headers\\Mouse3d "^.*Mouse3d/.*h$" )
 endif()
 
 # add diluculum code directly due to MSVC problems
@@ -895,7 +871,6 @@ endif()
 #include_directories( SYSTEM dependencies/qtcolorpicker )
 #add_library( qtcolorpicker STATIC dependencies/qtcolorpicker/qtcolorpicker.cpp )
 
-
 add_library( gitlib SHARED ${SRC_GITLIB} ${HEADER_GITLIB})
 target_include_directories( gitlib SYSTEM PUBLIC include/Repository/Git } )
 target_link_libraries( gitlib ${QT_LIBRARIES} )
@@ -904,6 +879,17 @@ set(FLAGS_FOR_DEBUG2 ${FLAGS_FOR_DEBUG})
 list(APPEND FLAGS_FOR_DEBUG2 " -DGITLIB_LIBRARY")
 string(REPLACE " " ";" REPLACED_FLAGS ${FLAGS_FOR_DEBUG2})
 target_compile_options( gitlib PUBLIC ${REPLACED_FLAGS} )
+
+if(MOUSE3D_FOUND)
+	add_library( mouse3dlib SHARED ${SRC_MOUSE3D} ${HEADER_MOUSE3D})
+	target_include_directories( mouse3dlib SYSTEM PUBLIC include/Mouse3d ${MOUSE3D_INCLUDE_DIRS} )
+	target_link_libraries( mouse3dlib ${QT_LIBRARIES} ${MOUSE3D_LIBRARIES})
+
+	set(FLAGS_FOR_DEBUG3 ${FLAGS_FOR_DEBUG})
+	list(APPEND FLAGS_FOR_DEBUG3 " -DMOUSE3D_LIBRARY")
+	string(REPLACE " " ";" REPLACED_FLAGS2 ${FLAGS_FOR_DEBUG3})
+	target_compile_options( mouse3dlib PUBLIC ${REPLACED_FLAGS2} )
+endif()
 
 # ---------------------------------------------------------------
 # Build and link 3Dsoftviz
@@ -926,7 +912,6 @@ target_link_libraries( ${3DSOFTVIZ_NAME}
     gitlib
     lua
 	libnoise
-	osgModeling
 )
 
 if( NOT MSVC )
@@ -964,26 +949,33 @@ if( LEAP_FOUND )
 	target_link_libraries( ${3DSOFTVIZ_NAME} ${LEAP_LIBRARIES} )
 endif()
 
-if( MOUSE3D_FOUND )
-	target_link_libraries( ${3DSOFTVIZ_NAME} ${MOUSE3D_LIBRARIES} )
+if ( MOUSE3D_FOUND )
+	target_link_libraries( ${3DSOFTVIZ_NAME} mouse3dlib )
 endif()
-
 # 'cotire' the executable
 if( COMMAND cotire )
 	# link ${3DSOFTVIZ_NAME}_unity target to all libraries to which ${3DSOFTVIZ_NAME} links
 	set_target_properties( ${3DSOFTVIZ_NAME} PROPERTIES COTIRE_UNITY_LINK_LIBRARIES_INIT "COPY" )
 	set_target_properties( gitlib PROPERTIES COTIRE_UNITY_LINK_LIBRARIES_INIT "COPY" )
+	if( MOUSE3D_FOUND )
+		set_target_properties( mouse3dlib PROPERTIES COTIRE_UNITY_LINK_LIBRARIES_INIT "COPY" )
+	endif()
 
 	cotire( ${3DSOFTVIZ_NAME} CONFIGURATIONS Debug Release )
 	cotire( gitlib CONFIGURATIONS Debug Release )
+	if( MOUSE3D_FOUND )
+		cotire( mouse3dlib CONFIGURATIONS Debug Release )
+	endif()
 endif()
 
 # Ensure correct dependencies
 if( USE_BUILTIN_DEPENDENCIES )
 
 	# dependencies of non-unity build
-    add_dependencies( ${3DSOFTVIZ_NAME} libnoise osgModeling gitlib dep_luametrics dep_leg dep_lpeg dep_luafilesystem )
-
+    add_dependencies( ${3DSOFTVIZ_NAME} libnoise gitlib dep_luametrics dep_leg dep_lpeg dep_luafilesystem )
+	if ( MOUSE3D_FOUND )
+		add_dependencies( ${3DSOFTVIZ_NAME} mouse3dlib )
+	endif()
 	if( MSVC )
 		add_dependencies( ${3DSOFTVIZ_NAME} dep_lua )
 	else()
@@ -996,8 +988,10 @@ if( USE_BUILTIN_DEPENDENCIES )
 
 	# dependencies of unity build
 	if (COMMAND cotire)
-		add_dependencies( ${3DSOFTVIZ_NAME}_unity libnoise osgModeling gitlib_unity dep_luametrics dep_leg dep_lpeg dep_luafilesystem )
-
+		add_dependencies( ${3DSOFTVIZ_NAME}_unity libnoise gitlib_unity dep_luametrics dep_leg dep_lpeg dep_luafilesystem )
+		if( MOUSE3D_FOUND )
+			add_dependencies( ${3DSOFTVIZ_NAME}_unity mouse3dlib_unity )
+		endif()
 		if( MSVC )
 			add_dependencies( ${3DSOFTVIZ_NAME}_unity dep_lua )
 		else()
@@ -1029,6 +1023,11 @@ install( TARGETS ${3DSOFTVIZ_NAME}
 install( TARGETS gitlib
     RUNTIME DESTINATION ${INSTALL_BIN} COMPONENT Runtime
     LIBRARY DESTINATION ${INSTALL_LIB} COMPONENT Runtime )
+if ( MOUSE3D_FOUND )
+	install( TARGETS mouse3dlib
+		RUNTIME DESTINATION ${INSTALL_BIN} COMPONENT Runtime
+		LIBRARY DESTINATION ${INSTALL_LIB} COMPONENT Runtime )
+endif()
 
 # add custom install_unity target
 if( COMMAND cotire )
@@ -1036,6 +1035,9 @@ if( COMMAND cotire )
 		COMMAND ${CMAKE_COMMAND} -P "cmake_install.cmake" )
 	add_dependencies( install_unity ${3DSOFTVIZ_NAME}_unity )
 	add_dependencies( install_unity gitlib_unity )
+	if ( MOUSE3D_FOUND )
+		add_dependencies( install_unity mouse3dlib_unity )
+	endif()
 endif()
 
 # install lua modules
@@ -1130,4 +1132,3 @@ set( CPACK_PACKAGE_VENDOR "${3DSOFTVIZ_VENDOR}" )
 set( CPACK_RESOURCE_FILE_README "${CMAKE_SOURCE_DIR}/${3DSOFTVIZ_README}" )
 #set( CPACK_COMPONENTS_ALL Runtime Dependencies Data )
 include( CPack )
-
