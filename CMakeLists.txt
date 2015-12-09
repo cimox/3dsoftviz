@@ -284,7 +284,10 @@ endif()
 # Find MOUSE3D
 find_package( MOUSE3D )
 if( MOUSE3D_FOUND )
+<<<<<<< Updated upstream
 #include_directories( SYSTEM ${MOUSE3D_INCLUDE_DIRS} )
+=======
+>>>>>>> Stashed changes
 	add_definitions( -DMOUSE3D_FOUND )
 	message( STATUS "3DMouse FOUND" )
 else()
@@ -872,14 +875,15 @@ endif()
 #add_library( qtcolorpicker STATIC dependencies/qtcolorpicker/qtcolorpicker.cpp )
 
 add_library( gitlib SHARED ${SRC_GITLIB} ${HEADER_GITLIB})
-target_include_directories( gitlib SYSTEM PUBLIC include/Repository/Git } )
+target_include_directories( gitlib SYSTEM PUBLIC include/Repository/Git )
 target_link_libraries( gitlib ${QT_LIBRARIES} )
 
 set(FLAGS_FOR_DEBUG2 ${FLAGS_FOR_DEBUG})
 list(APPEND FLAGS_FOR_DEBUG2 " -DGITLIB_LIBRARY")
-string(REPLACE " " ";" REPLACED_FLAGS ${FLAGS_FOR_DEBUG2})
+string(REPLACE " " ";" REPLACED_FLAGS ${FLAGS_FOR_DEBUG2} )
 target_compile_options( gitlib PUBLIC ${REPLACED_FLAGS} )
 
+<<<<<<< Updated upstream
 if(MOUSE3D_FOUND)
 	add_library( mouse3dlib SHARED ${SRC_MOUSE3D} ${HEADER_MOUSE3D})
 	target_include_directories( mouse3dlib SYSTEM PUBLIC include/Mouse3d ${MOUSE3D_INCLUDE_DIRS} )
@@ -888,6 +892,16 @@ if(MOUSE3D_FOUND)
 	set(FLAGS_FOR_DEBUG3 ${FLAGS_FOR_DEBUG})
 	list(APPEND FLAGS_FOR_DEBUG3 " -DMOUSE3D_LIBRARY")
 	string(REPLACE " " ";" REPLACED_FLAGS2 ${FLAGS_FOR_DEBUG3})
+=======
+if( MOUSE3D_FOUND )
+	add_library( mouse3dlib SHARED ${SRC_MOUSE3D} ${HEADER_MOUSE3D} )
+	target_include_directories( mouse3dlib SYSTEM PUBLIC include/Mouse3d ${MOUSE3D_INCLUDE_DIRS} )
+	target_link_libraries( mouse3dlib ${QT_LIBRARIES} ${MOUSE3D_LIBRARIES} )
+
+	set(FLAGS_FOR_DEBUG3 ${FLAGS_FOR_DEBUG})
+	list(APPEND FLAGS_FOR_DEBUG3 " -DMOUSE3D_LIBRARY")
+	string(REPLACE " " ";" REPLACED_FLAGS2 ${FLAGS_FOR_DEBUG3} )
+>>>>>>> Stashed changes
 	target_compile_options( mouse3dlib PUBLIC ${REPLACED_FLAGS2} )
 endif()
 
@@ -1131,4 +1145,8 @@ set( CPACK_PACKAGE_VERSION "${3DSOFTVIZ_VERSION}" )
 set( CPACK_PACKAGE_VENDOR "${3DSOFTVIZ_VENDOR}" )
 set( CPACK_RESOURCE_FILE_README "${CMAKE_SOURCE_DIR}/${3DSOFTVIZ_README}" )
 #set( CPACK_COMPONENTS_ALL Runtime Dependencies Data )
+<<<<<<< Updated upstream
 include( CPack )
+=======
+include( CPack )
+>>>>>>> Stashed changes
