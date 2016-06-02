@@ -121,21 +121,41 @@ endif()
 # Dependencies - Searching external dependencies
 # ------------------------------------------------------------
 
+# ------------------------------ Qt -------------------------------
 set( ALL_SYSTEM_HEADERS )
 set( ALL_COMPILE_DEFINITIONS )
 
-# ------------------------------ Qt4 -------------------------------
-# Find Qt4
-find_package( Qt4 REQUIRED )
-set( QT_USE_QTOPENGL 1 )
-set( QT_USE_QTSQL 1 )
-set( QT_USE_QTWEBKIT 1 )
-set( QT_USE_QTXML 1 )
-set( QT_USE_QTNETWORK 1 )
-include( ${QT_USE_FILE} )
+set( CMAKE_AUTOMOC ON )
+set( CMAKE_INCLUDE_CURRENT_DIR ON )
 
-# autogenerate all moc files
-set( CMAKE_AUTOMOC TRUE )
+# Find Qt5
+find_package( Qt5Core QUIET )
+find_package( Qt5Widgets QUIET )
+find_package( Qt5OpenGL QUIET )
+find_package( Qt5Sql QUIET )
+find_package( Qt5WebEngine QUIET )
+find_package( Qt5WebEngineWidgets QUIET )
+find_package( Qt5Xml QUIET )
+find_package( Qt5Network QUIET )
+
+if ( NOT Qt5Core_FOUND )
+	# Find Qt4
+	find_package( Qt4 REQUIRED )
+	set( QT_USE_QTOPENGL 1 )
+	set( QT_USE_QTSQL 1 )
+	set( QT_USE_QTWEBKIT 1 )
+	set( QT_USE_QTXML 1 )
+	set( QT_USE_QTNETWORK 1 )
+	include( ${QT_USE_FILE} )
+endif()
+
+if ( Qt5Core_FOUND )
+	message(STATUS "Qt5 package found")
+elseif( Qt4_FOUND )
+	message(STATUS "Qt4 package found")
+else()
+	message(STATUS "No suitable Qt package found")
+endif()
 
 # add special flag to GCC compiler when using Qt 4.6.x with GCC >4.6
 if( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND
@@ -962,6 +982,9 @@ target_include_directories( noiseutils SYSTEM PUBLIC ${DEPENDENCIES_INCLUDE_DIR}
 
 add_library( qtcolorpicker STATIC dependencies/qtcolorpicker/qtcolorpicker.cpp )
 target_include_directories( qtcolorpicker SYSTEM PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/qtcolorpicker )
+if ( Qt5Core_FOUND )
+	qt5_use_modules( qtcolorpicker Core Widgets )
+endif()
 
 # ---------------------------------------------------------------
 # Build modules as libraries
@@ -975,6 +998,12 @@ target_include_directories( gitlib
 		include
 		include/Repository/Git
 )
+
+if ( Qt5Core_FOUND )
+	qt5_use_modules( gitlib Core )
+elseif( Qt4_FOUND )
+	target_link_libraries( gitlib ${QT_LIBRARIES} )
+endif()
 
 target_compile_definitions( gitlib PUBLIC -DGITLIB_LIBRARY_STATIC )
 
@@ -1003,7 +1032,11 @@ if( LEAP_FOUND )
 
 	target_compile_options( leaplib PUBLIC ${FLAGS_FOR_DEBUG} )
 
-	target_link_libraries( leaplib ${QT_LIBRARIES} )
+	if ( Qt5Core_FOUND )
+		qt5_use_modules( leaplib Core )
+	elseif( Qt4_FOUND )
+		target_link_libraries( leaplib ${QT_LIBRARIES} )
+	endif()
 
 	# 'leap' the module
 	if( COMMAND cotire )
@@ -1048,6 +1081,21 @@ include_directories(SYSTEM ${ALL_SYSTEM_HEADERS})
 # 	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
 # )
 
+if ( Qt5Core_FOUND )
+	qt5_use_modules( ${3DSOFTVIZ_NAME} 
+		Core 
+		Widgets 
+		OpenGL 
+		Sql 
+		WebEngine 
+		WebEngineWidgets 
+		Xml 
+		Network 
+	)
+endif()
+
+# set compile flags only for our code ( suppresses warnigns on system headers )
+set_target_properties( ${3DSOFTVIZ_NAME} PROPERTIES COMPILE_FLAGS "${FLAGS_FOR_DEBUG}" )
 
 target_link_libraries( ${3DSOFTVIZ_NAME}
 	gitlib
@@ -1056,10 +1104,15 @@ target_link_libraries( ${3DSOFTVIZ_NAME}
 	libnoise
 	osgModeling
 	qtcolorpicker
-	${QT_LIBRARIES}
 	${OPENSCENEGRAPH_LIBRARIES}
 	${OSGVIEWER_LIBRARIES}
 )
+
+if ( Qt4_FOUND )
+	target_link_libraries( ${3DSOFTVIZ_NAME}
+		${QT_LIBRARIES}
+	)
+endif()
 
 if( NOT MSVC )
 	target_link_libraries( ${3DSOFTVIZ_NAME} diluculum
@@ -1287,7 +1340,7 @@ if( USE_BUILTIN_DEPENDENCIES )
 	)
 endif()
 
-# Include QT4 libraries in Apple bundle and on Windows
+# Include QT libraries in Apple bundle and on Windows
 if( WIN32 OR APPLE AND OSX_BUNDLE )
 	# On Apple plugins need to be bundled
 	if( APPLE AND OSX_BUNDLE )
